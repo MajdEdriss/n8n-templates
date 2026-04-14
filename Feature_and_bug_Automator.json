@@ -1,0 +1,786 @@
+{
+  "name": "Requirement-to-Task-V5",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "994edf19-32f8-4ca1-924b-c773c1a2edbf",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        14496,
+        5888
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=session_1"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        14624,
+        5888
+      ],
+      "id": "1958ebaf-acf3-417b-b9b1-e200a594b810",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "content": "## Feature & Bug Automator\n### Problemstellung\nIn vielen Softwareprojekten werden Anforderungen von Fachabteilungen oder Product Ownern in natürlicher Sprache und oft unstrukturiert formuliert. Diese müssen manuell in User Stories, Subtasks und Akzeptanzkriterien übersetzt werden, was zeitaufwendig ist und häufig zu Missverständnissen führt. Der Prozess ist fehleranfällig und bremst die effiziente Zusammenarbeit zwischen Fachseite und Entwicklungsteam.\n\n### Lösungsbeschreibung\nDer Workflow übersetzt unstrukturierte Anforderungen und Meldungen automatisch in klar strukturierte agile Artefakte.\nEr erkennt, ob es sich um einen Feature-Request oder einen Bug-Report handelt, und erzeugt daraus die passenden Jira-Tickets:\n\n- bei Feature-Requests werden User Story, Subtasks und Akzeptanzkriterien generiert,\n\n- bei Bug-Reports werden Beschreibung, Schritte zur Reproduktion, erwartetes und tatsächliches Verhalten sowie Priorität erstellt.\n\n- Durch die Integration von RAG (Retrieval-Augmented Generation) kann der KI-Agent zusätzlich auf spezifisches Wissen über das Produkt und interne Teamprozesse zugreifen. Dadurch werden die Ergebnisse noch kontextgenauer und praxisnäher.\n\n- Die Ergebnisse werden als strukturiertes JSON ausgegeben und können automatisch in Jira importiert werden.\n\n### Entwicklungsphasen\n#### Phase 1 – Grundfunktionalität\n#### Phase 2 – Bug-Handling und Priorisierung\n#### Phase 3 – Wissensintegration mit RAG\n",
+        "height": 880,
+        "width": 464
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        13360,
+        5536
+      ],
+      "id": "da2c504a-3d55-4968-9b13-755cabfe4934",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "inputText": "=Bestimme, ob der folgende Text ein Feature-Request oder ein Bug-Report ist.\nAntworte ausschließlich im gültigen JSON-Format:\n{ \"type\": \"feature\" | \"bug\" | \"unclear\" }\n\nText: {{ $json.Text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "feature"
+            },
+            {
+              "category": "bug"
+            },
+            {
+              "category": "unclear"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        14112,
+        6080
+      ],
+      "id": "39215845-aa77-4842-a51d-16106633595c",
+      "name": "Text Classifier",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input: {{ $json.Text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Du bist ein erfahrener Requirements Engineer.\nDeine Aufgabe ist es, aus einem Bug-Report in natürlicher Sprache einen sauberen Scrum-Bug Report zu erstellen.\n\nDu hast Zugriff auf ein Werkzeug, mit dem du Daten aus einer semantischen Vektor-Datenbank abrufen kannst.\n\nNutze immer zuerst die Daten aus der Vektor-Datenbank.\n\nWenn Daten gefunden wurden:\n\nBaue deine Antwort ausschließlich auf diesen Daten auf.\n\nGib die Quelle(n) aus der Wissensbasis an (\"quelle\": \"Zitat\") und nicht als blob.\n\nWenn keine relevanten Daten gefunden wurden:\n\nGib die Quelle(n) als leerer Text (\"quelle\": \"\").\n\nRegeln:\n\nAntworte ausschließlich im gültigen JSON-Format (keine Kommentare, keine Erklärungen).\n\nAlle Texte in klarer Alltagssprache, keine Fachjargon- oder Entwicklerbegriffe.\n\nKeine Tests, keine UI-Design-Mockups, keine Referenzen zu Code, keine Erklärungen.\n\nsummary: kurze Beschreibung des Bugs, maximal 100 Zeichen.\n\nBeispiel:\nWenn die aktuelle Versionsnummer verlangt wird, dann gib diese als Nummer aus und nicht als Text \"aktuelle Versionsnummer\"."
+        }
+      },
+      "id": "cbc41a69-9705-4f29-b91c-5204c2393eac",
+      "name": "Req-to-bug-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        14608,
+        6112
+      ],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        14112,
+        6272
+      ],
+      "id": "d087c43f-791e-4ff6-bdd4-7f59208893c8",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "value": "10000",
+          "mode": "list",
+          "cachedResultName": "SteuerZauberer"
+        },
+        "issueType": {
+          "__rl": true,
+          "value": "10005",
+          "mode": "list",
+          "cachedResultName": "Feature"
+        },
+        "summary": "={{ $json.output.zusammenfassung }}",
+        "additionalFields": {
+          "description": "={{ $json.output.userStory }}\n\nh3. Subtasks:\n{{ $json.output.subtasks.map((t, i) => (i+1) + \". \" + t).join(\"\\n\") }}\n\nh3. Akzeptanzkriterien:\n{{ $json.output.akzeptanzkriterien.map((t, i) => (i+1) + \". \" + t).join(\"\\n\") }}\n\nh3. Originaltext:\nbq. {{ $('Text Classifier').item.json.Text }}\n\n\n\n"
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        15216,
+        5744
+      ],
+      "id": "84aaaa96-93f9-4e85-b650-72fc9d75d025",
+      "name": "Create feature in Jira"
+    },
+    {
+      "parameters": {
+        "project": {
+          "__rl": true,
+          "value": "10000",
+          "mode": "list",
+          "cachedResultName": "SteuerZauberer"
+        },
+        "issueType": {
+          "__rl": true,
+          "value": "10007",
+          "mode": "list",
+          "cachedResultName": "Bug"
+        },
+        "summary": "={{ $json.output.zusammenfassung }}",
+        "additionalFields": {
+          "description": "=h3. Beschreibung\n{{ $json.output.beschreibung }}\n\nh3. Schritte zur Reproduktion\n{{ $json.output.schritteZurReproduktion }}\n\nh3. erwartetes Verhalten\n{{ $json.output.erwartetesVerhalten }}\n\nh3. tatsächliches Verhalten\n\n{{ $json.output['tatsächlichesVerhalten'] }}\n\nh3. Priorität\n{{ $json.output['priorität'] }}\n\nh3. Originaltext:\nbq. {{ $('Text Classifier').item.json.Text }}"
+        }
+      },
+      "type": "n8n-nodes-base.jira",
+      "typeVersion": 1,
+      "position": [
+        15216,
+        6112
+      ],
+      "id": "beef97e5-30e6-4208-872d-dad8d98ea840",
+      "name": "Create bug in jira"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input: {{ $json.Text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Du bist ein erfahrener Agile Coach und Requirements Engineer. \nDeine Aufgabe ist es, aus einem Feature-Request in natürlicher Sprache eine saubere Scrum-User Story, Subtasks und Akzeptanzkriterien zu erstellen.\n\nDu hast Zugriff auf ein Werkzeug, mit dem du Daten aus einer semantischen Datenbank abrufen kannst. Nutze diese Daten als erste und wichtigste Quelle für deine Antwort.\n\nRegeln:\n- Antworte ausschließlich im gültigen JSON-Format (keine Kommentare, keine Erklärungen).\n- Alle Texte in klarer Alltagssprache, keine Fachjargon- oder Entwicklerbegriffe.\n- Keine Tests, keine UI-Design-Mockups, keine Referenzen zu Code, keine Erklärungen im Text.\n- zusammenfassung:\n  - Beschreibung der User Story\n  - maximal 100 Zeichen\n- User Story:\n  - Form: \"Als [Nutzertyp] möchte ich [Handlung] können, um [Nutzen].\"\n  - Handlung immer aktiv (z. B. \"ein- und ausschalten können\").\n- Subtasks:\n  - 3–5 konkrete, konzeptionelle technische Umsetzungsschritte.\n  - Keine Dateinamen, keine Implementation-Details auf Code-Ebene.\n  - Nur was ein Entwickler als Arbeitspaket verstehen kann.\n- Akzeptanzkriterien:\n  - 3–5 überprüfbare Bedingungen.\n  - Sprache: **Deutsch**.\n  - Format: \"Gegeben … Wenn … Dann …\"\n  - Immer auch den Default-Zustand berücksichtigen (z. B. wenn keine Präferenz gesetzt ist)."
+        }
+      },
+      "id": "c3c8fe4e-4079-4656-9333-29043e15d02d",
+      "name": "Req-to-feature-Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        14576,
+        5600
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"zusammenfassung\": \"\",\n  \"userStory\": \"\",\n  \"subtasks\": [\"\", \"\"],\n  \"akzeptanzkriterien\": [\"\", \"\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        14944,
+        5760
+      ],
+      "id": "44ba73bc-5b15-4bc4-be57-5cab5fd19070",
+      "name": "Structured Output Feature"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"zusammenfassung\": \"\",\n  \"beschreibung\": \"\",\n  \"schritteZurReproduktion\": [\"\", \"\"],\n  \"erwartetesVerhalten\": \"\",\n  \"tatsächlichesVerhalten\": \"\",\n  \"Quelle\": \"\",\n  \"priorität\": \"Low | Medium | High | Critical\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        14816,
+        6256
+      ],
+      "id": "d6c6ad98-4050-45d3-8c18-d224f096f3ba",
+      "name": "Structured Output Bug"
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload your data to test RAG",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Upload your file(s)",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf, .csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2758fff-70e3-4007-8364-86499d2af246",
+      "name": "Upload your file here",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        13888,
+        5632
+      ],
+      "webhookId": "5692a6ac-d12b-4f13-bf12-4ef79955ae30",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "560c3681-4093-42c9-a2d2-972af9a31e43",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "position": [
+        13920,
+        5824
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "id": "4b244c3e-f1f3-4fe0-a745-dcadfff2adac",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "position": [
+        14192,
+        5712
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "formTitle": "EIngabe",
+        "formDescription": "Eingabetext",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Text",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        13904,
+        6096
+      ],
+      "id": "c7922d57-5268-452c-9d18-7aa97c58f2cc",
+      "name": "On form submission",
+      "webhookId": "d71ec975-7981-4f48-90f4-67138eb992b0"
+    },
+    {
+      "parameters": {
+        "content": "## RAG",
+        "height": 432,
+        "width": 608,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        13840,
+        5536
+      ],
+      "id": "e6db8fc1-42eb-458e-bf32-6c85f5954d80",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Text Classifier",
+        "height": 432,
+        "width": 608,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        13840,
+        5984
+      ],
+      "id": "928a319e-1d83-4cf3-9b4f-ff6a3d0bf559",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Text to Tasks",
+        "height": 880,
+        "width": 608,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        14464,
+        5536
+      ],
+      "id": "37017ac3-c400-4f84-b62e-287e74d5bef1",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Tasks to Jira",
+        "height": 880,
+        "width": 352,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        15088,
+        5536
+      ],
+      "id": "1ce34439-d3ed-4135-b6d5-1a4e61a7160c",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "chunkSize": 200,
+        "chunkOverlap": 50,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        14128,
+        5824
+      ],
+      "id": "308faa9e-85b8-4b35-a74a-566f77ff71b3",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        14928,
+        6016
+      ],
+      "id": "3a15b18a-efc8-4b5b-9f97-d7005ba2d2bf",
+      "name": "Embeddings OpenAI1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e2de7819-6a8b-4a37-99d5-b5a8e11f71cb",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        14000,
+        6592
+      ],
+      "webhookId": "5e56a263-3a40-44bd-bc9d-1cfb3bc2a87d",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a helpful assistant. You have access to a tool to retrieve data from a semantic database to answer questions. Always provide arguments when you execute the tool"
+        }
+      },
+      "id": "26a74040-d32f-44cd-b371-7d2357e6f441",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        14544,
+        6480
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {},
+      "id": "e32a8f22-bcf0-4178-af2f-fb9140a355c1",
+      "name": "Simple Memory1",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        14464,
+        6768
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        14224,
+        6768
+      ],
+      "id": "23d5e8c4-a06e-4a35-abf8-a1fddab79a5f",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        14736,
+        6928
+      ],
+      "id": "379a8884-031c-428e-bb0f-d6940adf1b61",
+      "name": "Embeddings OpenAI2"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "knowledge_base",
+        "toolDescription": "Dieses Tool greift auf die Wissensbasis der SteuerZauberer-Dokumentation zu, um Fragen von Nutzern präzise zu beantworten.\nEs nutzt die im Workflow hinterlegten Dokumente (z. B. API-Übersicht, Release Notes, Rollenbeschreibungen, Formulare), durchsucht diese mithilfe semantischer Abfragen (RAG) und liefert kontextbezogene Antworten.\n\nSo können Anwender gezielt Informationen abrufen – etwa zu Funktionen, Prozessen oder Teamstrukturen – ohne die gesamte Dokumentation manuell durchsuchen zu müssen.",
+        "memoryKey": {
+          "__rl": true,
+          "value": "vector_store_key",
+          "mode": "list",
+          "cachedResultName": "vector_store_key"
+        },
+        "topK": 5
+      },
+      "id": "b814ad9f-5311-497e-b54b-8da5e95073fa",
+      "name": "Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "position": [
+        14736,
+        5888
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "value": "vector_store_key",
+          "mode": "list",
+          "cachedResultName": "vector_store_key"
+        }
+      },
+      "id": "55671850-5a6e-422f-9aee-8b85d5815a9f",
+      "name": "Insert Data to Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "position": [
+        14096,
+        5568
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "## Chatbot with RAG",
+        "height": 688,
+        "width": 1232,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        13840,
+        6432
+      ],
+      "id": "67d39a34-6d50-4570-b424-5ecccbed4265",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Dieses Tool greift auf die Wissensbasis der SteuerZauberer-Dokumentation zu, um Fragen von Nutzern präzise zu beantworten.\nEs nutzt die im Workflow hinterlegten Dokumente (z. B. API-Übersicht, Release Notes, Rollenbeschreibungen, Formulare), durchsucht diese mithilfe semantischer Abfragen (RAG) und liefert kontextbezogene Antworten.\n\nSo können Anwender gezielt Informationen abrufen – etwa zu Funktionen, Prozessen oder Teamstrukturen – ohne die gesamte Dokumentation manuell durchsuchen zu müssen.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        14688,
+        6752
+      ],
+      "id": "159dfb39-7892-421f-8abf-14905654bd70",
+      "name": "Vector Store1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Req-to-feature-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Req-to-bug-Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Req-to-feature-Agent",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Req-to-bug-Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Req-to-feature-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Req-to-bug-Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Req-to-bug-Agent": {
+      "main": [
+        [
+          {
+            "node": "Create bug in jira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Req-to-feature-Agent": {
+      "main": [
+        [
+          {
+            "node": "Create feature in Jira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Feature": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Req-to-feature-Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Bug": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Req-to-bug-Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload your file here": {
+      "main": [
+        [
+          {
+            "node": "Insert Data to Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert Data to Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert Data to Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Req-to-bug-Agent",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Req-to-feature-Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1d5fcdc8-668d-4079-88ca-ae7f0fdbb828",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "04fcb9f469b37082bee1dd9c62e4a143516ffc4a8cad779f49536797634cf615"
+  },
+  "id": "KtX9UgWhQPZqrH23",
+  "tags": []
+}
