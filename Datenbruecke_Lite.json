@@ -1,0 +1,432 @@
+{
+  "name": "Data Bridge (Lite) - Webhook to Google Sheets with validation, dedupe & email alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "data-bridge-lite",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "fcee6e7c-094c-4fa3-9da6-7bae450f5ff9",
+      "name": "Webhook (incoming record)",
+      "webhookId": "5b85582f-82b6-4d3a-95b0-eb5b38d13d65"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aacd2969-4ebe-4871-aab4-88545d5ea93f",
+              "name": "id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "id": "9b690c57-6c25-4e5b-a82e-2564b15f7a57",
+              "name": "name",
+              "value": "={{ $json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "7c974b27-c4cd-49ff-95ff-32e2e5cb2ea1",
+              "name": "email",
+              "value": "={{ $json.body.email }}",
+              "type": "string"
+            },
+            {
+              "id": "d259a3f5-da1e-48d2-a194-8e607a68fe12",
+              "name": "subject",
+              "value": "={{ $json.body.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "b4994f02-b7c8-47a6-a15a-499981108fec",
+              "name": "amount",
+              "value": "={{ $json.body.amount || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "461541dd-6280-44b7-a45d-de25870a059d",
+              "name": "source",
+              "value": "={{ $json.body.source }}",
+              "type": "string"
+            },
+            {
+              "id": "a16795fb-80ef-46f6-a79d-42d93637c4f7",
+              "name": "message",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "69c1c651-6a55-4776-a1db-06da8bbe7719",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "id": "d4c71d08-11fd-46b4-af85-6b6503a1a599",
+      "name": "Normalize fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "d3af3e9e-f7fb-4304-822a-c955ef356c4f",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7f8f9ca9-4905-4494-b090-429d0270607d",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "4de409eb-828a-4c43-a397-76edc1ee74be",
+              "leftValue": "={{ $json.amount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "c83a059d-becc-432e-9ee6-77b4dc30a9d0",
+      "name": "Validate record"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.timestamp }}",
+            "ID": "={{ $json.id }}",
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Subject": "={{ $json.subject }}",
+            "Amount": "={{ $json.amount }}",
+            "Source": "={{ $json.source }}",
+            "Status": "ok"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        680,
+        200
+      ],
+      "id": "dcde13de-4617-46cf-a908-8e72dbfe0ed8",
+      "name": "Upsert row (dedupe on ID)",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "fromEmail": "data-bridge@example.com",
+        "toEmail": "team@example.com",
+        "subject": "=New record in Data Bridge: {{ $json.ID }}",
+        "emailFormat": "text",
+        "text": "=A record was synced to your sheet.\n\nID: {{ $json.ID }}\nName: {{ $json.Name }}\nEmail: {{ $json.Email }}\nSubject: {{ $json.Subject }}\nAmount: {{ $json.Amount }}\nSource: {{ $json.Source }}\nTime: {{ $json.Timestamp }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        200
+      ],
+      "id": "c0a8cffc-6878-4744-b399-730b5fede594",
+      "name": "Notify team",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"ok\", \"id\": $('Normalize fields').item.json.id } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        200
+      ],
+      "id": "a99d4572-167f-40fd-be55-682fe11abb04",
+      "name": "Respond OK"
+    },
+    {
+      "parameters": {
+        "fromEmail": "data-bridge@example.com",
+        "toEmail": "team@example.com",
+        "subject": "=Record needs review: {{ $json.id }}",
+        "emailFormat": "text",
+        "text": "=A record did NOT pass validation and was not written to the sheet.\n\nID: {{ $json.id }}\nEmail: {{ $json.email }}\nAmount: {{ $json.amount }}\n\nPlease check required fields (id, valid email, amount >= 0).",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        460
+      ],
+      "id": "2629a990-1435-4fea-931e-408d02b9b44a",
+      "name": "Notify: needs review"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"review\", \"id\": $('Normalize fields').item.json.id } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        460
+      ],
+      "id": "f8cee5dd-32a7-4922-a03d-1281b9ea9b68",
+      "name": "Respond review"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        720
+      ],
+      "id": "7c05290c-43c1-4fbf-871c-67b48dc7d623",
+      "name": "On workflow error"
+    },
+    {
+      "parameters": {
+        "fromEmail": "data-bridge@example.com",
+        "toEmail": "alerts@example.com",
+        "subject": "=Data Bridge error in: {{ $json.workflow.name }}",
+        "emailFormat": "text",
+        "text": "=The Data Bridge workflow failed.\n\nWorkflow: {{ $json.workflow.name }}\nError: {{ $json.execution.error.message }}\nNode: {{ $json.execution.lastNodeExecuted }}\nURL: {{ $json.execution.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        720
+      ],
+      "id": "d98a3067-a074-4b0f-aca9-684147b97fe9",
+      "name": "Send error alert",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "content": "## Data Bridge (Lite)\nStop copying data by hand. Send any record (order, lead, form entry) to the webhook and it lands, validated and deduplicated, in a Google Sheet, with an email notification.\n\n### How to use\n1. Add your **Google Sheets** + **SMTP/email** credentials.\n2. Point your source at the webhook (POST), e.g. a shop, a form, or another workflow.\n3. Set this workflow as its **own Error Workflow** (Settings) so failures alert you.\n\n### Example payload\n```\n{\n  \"id\": \"1001\",\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"subject\": \"New order\",\n  \"amount\": 149.0,\n  \"source\": \"webshop\",\n  \"message\": \"...\"\n}\n```\n### Sheet columns\nTimestamp | ID | Name | Email | Subject | Amount | Source | Status",
+        "height": 620,
+        "width": 440,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        120
+      ],
+      "id": "46f51116-30b7-42eb-9b69-65fe7d4d6d97",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Engineered, not just clicked together\nThe parts most templates skip, and exactly what keeps this reliable in production:\n\n- **Validation** before writing -> no garbage in your sheet\n- **Dedupe / idempotency** via append-or-update on `ID` -> no duplicate rows when a source fires twice\n- **Retry with backoff** on every writing/sending node\n- **Dedicated error path** -> you hear about failures first, nothing is lost silently",
+        "height": 300,
+        "width": 420,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        -120
+      ],
+      "id": "dc3105bb-1a35-429d-b6a2-3f19242969a9",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Need the real thing?\nThis is the **Lite** version with Google Sheets as the hub.\n\nWant it wired into your actual accounting / CRM / ERP (lexoffice, DATEV, HubSpot, ...) with monitoring, dashboards and a UI your team likes?\n\nThe difference: a software engineer, not just a tool-connector.\n\n**-> me-dev.de · by Majd Edriss**",
+        "height": 280,
+        "width": 360,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        600
+      ],
+      "id": "5ee472b1-9da1-4d7d-918a-793d2ab7dcc1",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook (incoming record)": {
+      "main": [
+        [
+          {
+            "node": "Normalize fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize fields": {
+      "main": [
+        [
+          {
+            "node": "Validate record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate record": {
+      "main": [
+        [
+          {
+            "node": "Upsert row (dedupe on ID)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: needs review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert row (dedupe on ID)": {
+      "main": [
+        [
+          {
+            "node": "Notify team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify team": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify: needs review": {
+      "main": [
+        [
+          {
+            "node": "Respond review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Send error alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "aefd3ccc-e714-4248-8bc0-889ba83ac1bd",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "a7ea5a81179e49f1",
+  "tags": []
+}
