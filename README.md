@@ -11,6 +11,7 @@ dedicated error path are included, the parts most templates skip.
 |---|---|---|
 | **Data Bridge (Lite)** | Webhook -> validated, deduplicated record into Google Sheets + email notifications | [docs/Data_Bridge_Lite.md](docs/Data_Bridge_Lite.md) |
 | **Feature & Bug Automator** | AI/RAG workflow that turns unstructured requirements & bug reports into Jira tickets | [docs/Feature_and_Bug_Automator.md](docs/Feature_and_Bug_Automator.md) |
+| **Inquiry Assistant (Lite)** | Contact form -> instant reply, AI triage, Google Sheets + email, with follow-up reminder | [docs/Inquiry_Assistant_Lite.md](docs/Inquiry_Assistant_Lite.md) |
 
 ## How to import
 

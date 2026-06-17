@@ -1,0 +1,645 @@
+{
+  "name": "Inquiry Assistant (Lite) - form to AI triage, Google Sheets & email with follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Contact / Inquiry",
+        "formDescription": "Send us your request and we will get back to you.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Subject",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Message",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "5aaa2fd6-b4f2-48e7-a837-6cc93af24eff",
+      "name": "Inquiry form",
+      "webhookId": "e1543694-7dd1-469a-ae63-f938863ebe1f"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c5d134ea-7aca-4c6a-9fd0-028226c7e4e1",
+              "name": "id",
+              "value": "={{ $now.toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "518834c6-1681-4a66-a0b5-c0e294505885",
+              "name": "name",
+              "value": "={{ $json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "1f554a51-b3ba-4a09-8465-70b063e414f0",
+              "name": "email",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "546bf340-4289-4226-9fb9-7febc784ef05",
+              "name": "subject",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "7eeede17-be72-4766-a6e6-36d74b9c2b42",
+              "name": "message",
+              "value": "={{ $json.Message }}",
+              "type": "string"
+            },
+            {
+              "id": "5d10f414-94a7-434c-a7c8-529696ab9208",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "422c49b0-d9fc-408e-b536-4d401bb50df8",
+              "name": "status",
+              "value": "new",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "id": "41abc39f-5d7a-4fb3-ae74-f50f83586dfd",
+      "name": "Normalize fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "589922e0-3fcb-491e-9fe9-179a7271556f",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "0d24fe28-1993-47ff-8e24-11eb0f81112f",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "01f07883-f1d0-4f7e-a3e3-9775674539d3",
+      "name": "Validate inquiry"
+    },
+    {
+      "parameters": {
+        "fromEmail": "inquiries@example.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "We received your inquiry",
+        "emailFormat": "text",
+        "text": "=Hi {{ $json.name }},\n\nthanks for your message. We have received your inquiry and will get back to you shortly.\n\nYour message:\n{{ $json.message }}\n\nBest regards",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        200
+      ],
+      "id": "0bc57bcb-2b9a-4c4c-8368-13d18a0a0091",
+      "name": "Acknowledge customer",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You classify an incoming customer inquiry. Determine the category, the urgency (low, medium or high), a short one-line summary, and any information that is missing to answer it.\n\nName: {{ $('Normalize fields').item.json.name }}\nSubject: {{ $('Normalize fields').item.json.subject }}\nMessage: {{ $('Normalize fields').item.json.message }}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        880,
+        200
+      ],
+      "id": "17e0a070-2be7-4022-a3e6-f7475be6e52e",
+      "name": "Classify inquiry"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        880,
+        420
+      ],
+      "id": "42c01143-74eb-46b8-b8ed-55e4b3b1f809",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"category\": \"\",\n  \"urgency\": \"low | medium | high\",\n  \"summary\": \"\",\n  \"missingInfo\": \"\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1080,
+        420
+      ],
+      "id": "6fc3b82e-9330-4a54-8773-50c0d48981a5",
+      "name": "Structured Output"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Normalize fields').item.json.timestamp }}",
+            "ID": "={{ $('Normalize fields').item.json.id }}",
+            "Name": "={{ $('Normalize fields').item.json.name }}",
+            "Email": "={{ $('Normalize fields').item.json.email }}",
+            "Subject": "={{ $('Normalize fields').item.json.subject }}",
+            "Category": "={{ $json.output.category }}",
+            "Urgency": "={{ $json.output.urgency }}",
+            "Summary": "={{ $json.output.summary }}",
+            "Status": "={{ $('Normalize fields').item.json.status }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1100,
+        200
+      ],
+      "id": "bcd97524-3ec3-438a-97fb-ab8ac484877d",
+      "name": "Save inquiry (upsert)",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "fromEmail": "inquiries@example.com",
+        "toEmail": "team@example.com",
+        "subject": "=New inquiry [{{ $('Classify inquiry').item.json.output.urgency }}]: {{ $('Normalize fields').item.json.subject }}",
+        "emailFormat": "text",
+        "text": "=From: {{ $('Normalize fields').item.json.name }} <{{ $('Normalize fields').item.json.email }}>\nCategory: {{ $('Classify inquiry').item.json.output.category }}\nUrgency: {{ $('Classify inquiry').item.json.output.urgency }}\nSummary: {{ $('Classify inquiry').item.json.output.summary }}\nMissing info: {{ $('Classify inquiry').item.json.output.missingInfo }}\n\nMessage:\n{{ $('Normalize fields').item.json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1320,
+        200
+      ],
+      "id": "1815c0d0-f21b-41cb-a191-c1b06581d0e1",
+      "name": "Notify team",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "fromEmail": "inquiries@example.com",
+        "toEmail": "team@example.com",
+        "subject": "=Incomplete inquiry from {{ $json.name }}",
+        "emailFormat": "text",
+        "text": "=An inquiry did not pass validation (missing valid email or message).\n\nName: {{ $json.name }}\nEmail: {{ $json.email }}\nMessage: {{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        420
+      ],
+      "id": "ead5ee3f-5b3f-4d90-9539-ad28d71786cc",
+      "name": "Notify: incomplete"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        720
+      ],
+      "id": "e8388b3d-164a-4a93-a562-15ba4eaaadf2",
+      "name": "Daily follow-up check"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        720
+      ],
+      "id": "9533c468-1dea-4970-ae5a-b3f5c88c4496",
+      "name": "Get inquiries",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0e5118b1-962f-4dde-9142-1216e0e24509",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "new",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "d205e0fa-01dc-4e88-b7ba-51d61998d1bb",
+              "leftValue": "={{ $json.Timestamp }}",
+              "rightValue": "={{ $now.minus({ days: 2 }).toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "before"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        720
+      ],
+      "id": "92558e72-fb49-4cad-8a29-3a13033d2e5a",
+      "name": "Open & older than 2 days"
+    },
+    {
+      "parameters": {
+        "fromEmail": "inquiries@example.com",
+        "toEmail": "team@example.com",
+        "subject": "=Follow-up needed: {{ $json.Subject }} ({{ $json.Name }})",
+        "emailFormat": "text",
+        "text": "=This inquiry is still open and older than 2 days:\n\nFrom: {{ $json.Name }} <{{ $json.Email }}>\nSubject: {{ $json.Subject }}\nReceived: {{ $json.Timestamp }}\nSummary: {{ $json.Summary }}\n\nPlease follow up. (Set Status to \"done\" in the sheet to stop reminders.)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        720
+      ],
+      "id": "6fafa976-f992-4019-be19-eec4403b44fd",
+      "name": "Send follow-up reminder",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        980
+      ],
+      "id": "0c2eedc1-d607-419e-bfc4-b3703760dbd5",
+      "name": "On workflow error"
+    },
+    {
+      "parameters": {
+        "fromEmail": "inquiries@example.com",
+        "toEmail": "alerts@example.com",
+        "subject": "=Inquiry Assistant error: {{ $json.workflow.name }}",
+        "emailFormat": "text",
+        "text": "=The Inquiry Assistant workflow failed.\n\nWorkflow: {{ $json.workflow.name }}\nError: {{ $json.execution.error.message }}\nNode: {{ $json.execution.lastNodeExecuted }}\nURL: {{ $json.execution.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        220,
+        980
+      ],
+      "id": "8bbbe92c-8c87-445c-86cd-904b46a538d3",
+      "name": "Send error alert",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "content": "## Inquiry Assistant (Lite)\nNo customer inquiry gets lost. Every request is captured, acknowledged instantly, classified by AI and routed to the right person, with an automatic follow-up reminder if it stays open.\n\n### How to use\n1. Add **OpenAI**, **Google Sheets** and **SMTP/email** credentials.\n2. Create a sheet with columns: Timestamp | ID | Name | Email | Subject | Category | Urgency | Summary | Status\n3. Share the contact-form link, or point your website form at the form trigger.\n4. Set this workflow as its own **Error Workflow** (Settings).\n\nThe AI model is swappable (an EU-hosted model works too).",
+        "height": 540,
+        "width": 440,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        120
+      ],
+      "id": "dec6a9aa-ad47-4bdb-b5bb-87fd42e853ad",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Engineered, not just clicked together\n- **Instant acknowledgement** before anything else, so the customer hears back in seconds\n- **Validation** before writing -> no broken records\n- **Dedupe** via append-or-update on `ID`\n- **Retry with backoff** on every external call\n- **Scheduled follow-up** instead of a long-running wait\n- **Dedicated error path** -> failures alert you",
+        "height": 320,
+        "width": 380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        20
+      ],
+      "id": "428be840-fe53-49c1-a16a-d6ad54f8a089",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Follow-up loop\nA daily schedule scans the sheet for inquiries still marked `new` and older than 2 days, then emails a reminder. Set Status to `done` to stop reminders.\n\n## Need the real thing?\nThis is the Lite version. Want it wired to your real inbox, CRM and routing rules, with a UI your team likes?\n\n-> me-dev.de - by Majd Edriss",
+        "height": 320,
+        "width": 380,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        700
+      ],
+      "id": "4a7ff631-950a-4806-b168-a10e29f60ec8",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inquiry form": {
+      "main": [
+        [
+          {
+            "node": "Normalize fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize fields": {
+      "main": [
+        [
+          {
+            "node": "Validate inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate inquiry": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: incomplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge customer": {
+      "main": [
+        [
+          {
+            "node": "Classify inquiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify inquiry": {
+      "main": [
+        [
+          {
+            "node": "Save inquiry (upsert)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save inquiry (upsert)": {
+      "main": [
+        [
+          {
+            "node": "Notify team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify inquiry",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classify inquiry",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily follow-up check": {
+      "main": [
+        [
+          {
+            "node": "Get inquiries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get inquiries": {
+      "main": [
+        [
+          {
+            "node": "Open & older than 2 days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open & older than 2 days": {
+      "main": [
+        [
+          {
+            "node": "Send follow-up reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On workflow error": {
+      "main": [
+        [
+          {
+            "node": "Send error alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0f10c6d9-191f-4063-8911-c30cceda309b",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "b9ae5a078dbd4e92",
+  "tags": []
+}
