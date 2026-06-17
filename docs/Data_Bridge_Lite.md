@@ -75,7 +75,7 @@ column for append-or-update.
 
 ## Setup
 
-1. **Import** the workflow (`Datenbruecke_Lite.json`).
+1. **Import** the workflow (`Data_Bridge_Lite.json`).
 2. **Google Sheets**: add your credential, then open *Upsert row (dedupe on ID)*
    and select your spreadsheet and sheet. Confirm the matching column is `ID`.
 3. **Email**: add an SMTP (or swap the email nodes for Gmail) credential and set

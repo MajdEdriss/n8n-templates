@@ -10,7 +10,7 @@ dedicated error path are included, the parts most templates skip.
 | Workflow | What it does | Docs |
 |---|---|---|
 | **Data Bridge (Lite)** | Webhook -> validated, deduplicated record into Google Sheets + email notifications | [docs/Data_Bridge_Lite.md](docs/Data_Bridge_Lite.md) |
-| **Feature & Bug Automator** | AI/RAG workflow that turns unstructured requirements & bug reports into Jira tickets | - |
+| **Feature & Bug Automator** | AI/RAG workflow that turns unstructured requirements & bug reports into Jira tickets | [docs/Feature_and_Bug_Automator.md](docs/Feature_and_Bug_Automator.md) |
 
 ## How to import
 
